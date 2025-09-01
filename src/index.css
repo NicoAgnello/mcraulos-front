@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* Importacion de fuente */
 @theme {
   --font-pacifico: "Pacifico", cursive;
 }

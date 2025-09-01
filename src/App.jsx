@@ -6,7 +6,9 @@ function App() {
 
   return (
     <>
+    <div className='flex item-center justify-center bg-red-600 p-5'>
       <Header></Header>    
+    </div>
     </>
   )
 }

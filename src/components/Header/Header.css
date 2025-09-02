@@ -5,7 +5,17 @@ h1{
 .title-mcraulos{
     color: #FFA500;
 }
-
+@media(width >=620px ){
+    .title-mcraulos{
+        min-width: 22rem;
+    }
+    
+}
+@media(width<=620px){
+.media-column{
+        flex-direction: column;
+    }
+}
 /* .title-yellow{
     color: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
 } */

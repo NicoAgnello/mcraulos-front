@@ -3,5 +3,18 @@ h1{
 }
 
 .title-mcraulos{
-    color: #ffff;
+    color: #FFA500;
+}
+
+/* .title-yellow{
+    color: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+} */
+ .welcome-text {
+    /* background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700);
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text; */
+    color: whitesmoke;
 }

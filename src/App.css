@@ -2,3 +2,7 @@
  padding: 0;
  margin: 0; 
 } */
+
+.bg-red-mcraulos{
+   background: linear-gradient(135deg, #DC143C 0%, #B22222 50%, #8B0000 100%);
+}

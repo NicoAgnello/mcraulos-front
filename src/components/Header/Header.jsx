@@ -1,12 +1,13 @@
 import "./Header.css";
-import logo from "/src/assets/burger.svg";
+import logo from "/src/assets/logos/burger.svg";
 import { Typewriter } from 'react-simple-typewriter'
-
+import logo1 from "../../assets/logos/logo1.0.svg";
 export const Header = () => {
   return (
     <>
       <header className="flex flex-col items-center justify-center">
-        <img src={logo} alt="logoMcRaulos" className="h-60" />
+        <div className="flex items-center">
+        <img src={logo1} alt="logoMcRaulos" className="h-60" />
         <h1 className="font-pacifico text-7xl pt-8 title-mcraulos">
         <Typewriter
           words={["McRaulo's"]}
@@ -17,6 +18,8 @@ export const Header = () => {
           delaySpeed={1000}  // pausa antes de borrar/escribir de nuevo
         />
       </h1>
+        </div>
+      <p className="welcome-text text-4xl font-bold mb-2 pt-5">¡Bienvenido!</p>
       </header>
     </>
   );

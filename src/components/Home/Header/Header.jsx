@@ -1,13 +1,12 @@
 import "./Header.css";
-import logo from "/src/assets/logos/burger.svg";
 import { Typewriter } from 'react-simple-typewriter'
-import logo1 from "../../assets/logos/logo1.0.svg";
+import logoMcRaulos from "/src/assets/logos/logoMcRaulos.svg";
 export const Header = () => {
   return (
     <>
       <header className="flex flex-col items-center justify-center">
         <div className="flex items-center media-column">
-          <img src={logo1} alt="logoMcRaulos" className="h-60" />
+          <img src={logoMcRaulos} alt="logoMcRaulos" className="h-60" />
           <h1 className="font-pacifico text-7xl pt-8 title-mcraulos">
           <Typewriter
             words={["McRaulo's"]}

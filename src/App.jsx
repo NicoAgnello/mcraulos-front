@@ -1,13 +1,12 @@
 // App.jsx
 import { Routes, Route } from 'react-router-dom'
-import Home from './pages/Home.jsx'
-import OtraPagina from './pages/OtraPagina.jsx'
+import {Home} from './pages/Home.jsx'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
-      <Route path="/otra" element={<OtraPagina />} />
+      {/* <Route path="/menu" element={<Menu />} /> */}
     </Routes>
   )
 }

@@ -1,7 +1,10 @@
 import "./Header.css";
 import { Typewriter } from 'react-simple-typewriter'
 import logoMcRaulos from "/src/assets/logos/logoMcRaulos.svg";
+import { useI18n } from "../../../i18n/I18nProvider";
 export const Header = () => {
+  const {lang, setLang, t} = useI18n();
+
   return (
     <>
       <header className="flex flex-col items-center justify-center">
@@ -18,7 +21,7 @@ export const Header = () => {
           />
           </h1>
         </div>
-      <p className="welcome-text text-4xl font-bold mb-2 pt-5">¡Bienvenido!</p>
+      <p className="welcome-text text-4xl font-bold mb-2 pt-5">{t("welcome")}</p>
       </header>
     </>
   );

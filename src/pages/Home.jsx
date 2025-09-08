@@ -1,7 +1,7 @@
 // pages/Home.jsx
 import { Header } from '../components/Home/Header/Header.jsx'
 import { LanguageSelector } from '../components/Home/LenguageSelector/LenguageSelector.jsx'
-import {ServiceMode} from '../components/Home/ServiceMode/ServiceMode.jsx'
+import { ServiceMode } from '../components/Home/ServiceMode/ServiceMode.jsx'
 import { useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import '../index.css'

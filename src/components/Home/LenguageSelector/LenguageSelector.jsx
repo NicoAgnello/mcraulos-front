@@ -2,6 +2,7 @@
 import { useState } from "react";
 import esFlag from "../../../assets/flags/flag-es.svg";
 import enFlag from "../../../assets/flags/flag-en.svg";
+import { useI18n } from "../../../i18n/I18nProvider";
 
 const LANGS = [
   { code: "es", flag: esFlag, label: "Español" },
@@ -10,10 +11,14 @@ const LANGS = [
 ];
 
 export const LanguageSelector = ({ defaultValue = "es", onChange }) => {
+
+  const {lang, setLang, t} = useI18n();
+
   const [selected, setSelected] = useState(defaultValue);
 
   const handleSelect = (code) => {
     setSelected(code);
+    setLang(code);
     onChange?.(code);
     if (navigator.vibrate) navigator.vibrate(30);
   };
@@ -21,7 +26,7 @@ export const LanguageSelector = ({ defaultValue = "es", onChange }) => {
   return (
      <section className="w-full mt-7">
       <h2 className="text-center text-white/90 text-2xl font-semibold mb-6">
-        Selecciona tu idioma
+        {t("select_language")}
       </h2>
 
       {/* contenedor centrado */}

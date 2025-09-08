@@ -2,8 +2,11 @@ import './ServiceMode.css'
 import { useState } from "react";
 import { IoMdRestaurant } from "react-icons/io";
 import { GiPaperBagFolded } from "react-icons/gi";
+import { useI18n } from "../../../i18n/I18nProvider";
+
 
 export const ServiceMode = ({ onSelect }) => {
+    const {lang, setLang, t} = useI18n();
     const [selected, setSelected] = useState(null);
 
     const handleSelect = (mode) => {
@@ -16,7 +19,7 @@ export const ServiceMode = ({ onSelect }) => {
       <>
         <section className="w-full max-w-4xl mx-auto mt-10">
           <h2 className="text-center text-white/90 text-2xl font-semibold mb-6">
-            ¿Cómo querés tu pedido?
+            {t('service_question')}
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -34,7 +37,7 @@ export const ServiceMode = ({ onSelect }) => {
              
               <div className="flex flex-col items-center justify-center h-40 w-full rounded-xl bg-black/50">
                 <IoMdRestaurant  className="text-5xl text-yellow-400 mb-3" />
-                <span className="text-white font-bold text-xl">Comer aquí</span>
+                <span className="text-white font-bold text-xl">{t('dine_in')}</span>
               </div>
             </button>
 
@@ -51,7 +54,7 @@ export const ServiceMode = ({ onSelect }) => {
             >
               <div className="flex flex-col items-center justify-center h-40 w-full rounded-xl bg-black/50">
                 <GiPaperBagFolded className="text-5xl text-yellow-400 mb-3 stroke-black stroke-2" />
-                <span className="text-white font-bold text-xl">Para llevar</span>
+                <span className="text-white font-bold text-xl">{t('take_away')}</span>
               </div>
             </button>
           </div>

@@ -1,60 +1,99 @@
 // pages/Menu.jsx
 import { HeaderMenu } from "../components/Menu/HeaderMenu/HeaderMenu";
 import { Tabs } from "../components/Menu/Tabs/Tabs";
+import { ProductGrid } from "../components/Menu/ProductCard/ProductGrid";
 import { useState, useEffect } from "react";
+import {FooterMenu} from "../components/Menu/FooterMenu/FooterMenu.jsx";
 
 export const Menu = () => {
-  const [category, setCategory] = useState("burgers"); // lo que selecciona el Tabs
+  const [category, setCategory] = useState("burgers");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  useEffect(() => {
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        setLoading(true);
-        setErr("");
+  const [subtotal, setSubtotal] = useState(0);
+  const [itemCount, setItemCount] = useState(0);  
+useEffect(() => {
+  const controller = new AbortController();
 
-        // ejemplo de mapeo de categoría -> endpoint
-        const ENDPOINTS = {
-          burgers: "/api/productos/categoria/1",
-          fries: "/api/productos/categoria/2",
-          drinks: "/api/productos/categoria/3",
-        };
+  const load = async () => {
+    try {
+      setLoading(true);
+      setErr("");
 
-        const url = ENDPOINTS[category] ?? "/api/productos";
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+      const ENDPOINTS = {
+        burgers: "/api/productos/categoria/1",
+        fries:   "/api/productos/categoria/3",
+        drinks:  "/api/productos/categoria/2",
+      };
 
-        // adaptá según tu shape real
-        setItems(Array.isArray(json.data) ? json.data.flat() : json.data);
-      } catch (e) {
-        if (e.name !== "AbortError")
-          setErr(e.message || "Error cargando productos");
-      } finally {
-        setLoading(false);
+      const url = ENDPOINTS[category] ?? "/api/productos";
+      const res = await fetch(url, { signal: controller.signal });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("❗HTTP", res.status, res.statusText, txt);
+        throw new Error(`HTTP ${res.status}`);
       }
-    };
 
-    load();
-    return () => controller.abort();
-  }, [category]); // 👈 dispara cada vez que cambiás de pestaña
+      const raw = await res.json().catch(() => null);
+      //console.log("✅ JSON crudo:", raw);
+
+      // --- Normalizamos el shape:
+      // puede venir como array directo o envuelto en {data} o {productos}
+      const arr =
+        Array.isArray(raw) ? raw :
+        Array.isArray(raw?.data) ? raw.data :
+        Array.isArray(raw?.productos) ? raw.productos :
+        [];
+
+      // --- Map al shape que espera la Card:
+      const mapped = arr.map((d) => ({
+        id: d.id_producto ?? d.ID,
+        nombre: d.nombre ?? "Producto",
+        precio: Number(d.precio_base ?? 0),
+        imagen: d.imagen_url ?? "",
+        descripcion: d.descripcion ?? "",
+      }));
+
+      setItems(mapped);
+    } catch (e) {
+      if (e.name !== "AbortError") {
+        console.error(e);
+        setErr("No pudimos cargar el menú.");
+        setItems([]); // vaciamos para evitar mapas sobre undefined
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  load();
+  return () => controller.abort();
+}, [category]);
+
+
+  const handleAdd = (product, qty) => {
+    // TODO: integrar con tu carrito global
+    console.log("ADD ->", product.nombre, qty);
+  };
+
   return (
-    <main className=" min-h-screen">
+    <>
       <HeaderMenu />
-      <Tabs value={category} onChange={setCategory} className="mb-4" />
-      {loading && <p>Cargando…</p>}
-      {err && <p className="text-red-400">⚠ {err}</p>}
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((p) => (
-          <li key={p.id_producto} className="rounded-xl border p-3">
-            <h3 className="font-semibold">{p.nombre}</h3>
-            <p className="text-white/70 text-sm">{p.descripcion}</p>
-            <p className="mt-2">${p.precio_base}</p>
-          </li>
-        ))}
-      </ul>
-    </main>
+      <Tabs value={category} onChange={setCategory} />
+      <main className="px-4 pb-28 pt-4 max-w-[1100px] mx-auto">
+        {err && <p className="text-red-600">{err}</p>}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-64 rounded-2xl bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <ProductGrid items={items} onAdd={handleAdd} />
+        )}
+      </main>
+      <FooterMenu subtotal={subtotal} itemCount={itemCount} />
+    </>
   );
 };

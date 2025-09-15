@@ -84,7 +84,7 @@ useEffect(() => {
       <main className="px-4 pb-28 pt-4 max-w-[1100px] mx-auto">
         {err && <p className="text-red-600">{err}</p>}
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 2xl:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="h-64 rounded-2xl bg-zinc-200/60 dark:bg-zinc-800/60 animate-pulse" />
             ))}

@@ -24,12 +24,12 @@ export const ProductCard = ({
 
   const dec = () => setQty(q => Math.max(0, q - 1));
   const inc = () => setQty(q => Math.min(99, q + 1));
-  const handleAdd = () => {
-    if (qty === 0) setQty(1);
-    const amount = qty === 0 ? 1 : qty;
-    onAdd?.(product, amount);
-    if (navigator.vibrate) navigator.vibrate(20);
-  };
+ const handleAdd = () => {
+  if (qty <= 0) return;
+  onAdd?.(product, qty);   // el padre pasa cart.add
+  if (navigator.vibrate) navigator.vibrate(20);
+  setQty(0);
+};
 
   return (
     <article

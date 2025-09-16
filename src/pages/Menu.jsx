@@ -4,14 +4,15 @@ import { Tabs } from "../components/Menu/Tabs/Tabs";
 import { ProductGrid } from "../components/Menu/ProductCard/ProductGrid";
 import { useState, useEffect } from "react";
 import {FooterMenu} from "../components/Menu/FooterMenu/FooterMenu.jsx";
+import { useCart } from "../state/cartContext";
 
 export const Menu = () => {
   const [category, setCategory] = useState("burgers");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [subtotal, setSubtotal] = useState(0);
-  const [itemCount, setItemCount] = useState(0);  
+  const { add, totals } = useCart();  
+  const CATEGORY_IDS = { burgers: 1, fries: 3, drinks: 2 }; // 👈 tus ids actuales
 useEffect(() => {
   const controller = new AbortController();
 
@@ -72,9 +73,9 @@ useEffect(() => {
 }, [category]);
 
 
-  const handleAdd = (product, qty) => {
-    // TODO: integrar con tu carrito global
-    console.log("ADD ->", product.nombre, qty);
+  
+  const handleAdd = (product, qty = 1) => {
+    add({ ...product, categoria_id: CATEGORY_IDS[category] }, qty);
   };
 
   return (
@@ -93,7 +94,7 @@ useEffect(() => {
           <ProductGrid items={items} onAdd={handleAdd} />
         )}
       </main>
-      <FooterMenu subtotal={subtotal} itemCount={itemCount} />
+      <FooterMenu subtotal={totals.subtotal} itemCount={totals.count} />
     </>
   );
 };

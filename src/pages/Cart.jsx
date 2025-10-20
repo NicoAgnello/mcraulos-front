@@ -1,15 +1,23 @@
 import { useCart } from "../state/cartContext";
 import { HeaderMenu } from "../components/Menu/HeaderMenu/HeaderMenu";
-
+import { useNavigate } from "react-router-dom";
 export const Cart = () => {
   const { items, totals, setQty, remove, clear } = useCart();
+  const navigate = useNavigate();
 
   return (
     <>
       <HeaderMenu />
       <main className="max-w-[900px] mx-auto px-4 py-6">
-        <h1 className="text-2xl font-semibold mb-4">Tu carrito</h1>
-
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-semibold mb-4">Tu carrito</h1>
+          <button
+            onClick={() => navigate("/checkout")}
+            className="px-6 py-2 rounded-xl bg-amber-400 hover:brightness-105 text-black font-semibold shadow-sm active:scale-[.97] transition cursor-pointer"
+          >
+            Ir a pagar
+          </button>
+        </div>
         {items.length === 0 ? (
           <p>Tu carrito está vacío.</p>
         ) : (
@@ -60,7 +68,7 @@ export const Cart = () => {
             <div className="mt-6 flex items-center justify-between">
               <button
                 onClick={clear}
-                className="text-sm text-red-600 underline"
+                className="text-xm cursor-pointer text-red-600 underline"
               >
                 Vaciar carrito
               </button>

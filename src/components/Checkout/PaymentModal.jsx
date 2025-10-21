@@ -1,4 +1,3 @@
-// src/components/Checkout/PaymentModal.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
 
@@ -17,14 +16,17 @@ export default function PaymentModal({
   total,
   onClose,
   onSuccess,
-  persistOrder, // 👈 NUEVO (async) crea+confirma+verifica y devuelve {idPedido}
+  persistOrder, // async → devuelve { idPedido }
 }) {
   const [status, setStatus] = useState("idle"); // idle | processing | success
   const [backendStep, setBackendStep] = useState("idle"); // idle | saving | done | error
-  const [orderId, setOrderId] = useState(""); // se mostrará el real si persistOrder corre OK
+  const [orderId, setOrderId] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
   const [cardStep, setCardStep] = useState("detect"); // detect | processing
   const timerRef = useRef(null);
+
+  // ✅ NUEVO: asegurar que persistOrder sólo corra UNA vez por apertura
+  const persistedOnceRef = useRef(false);
 
   const title = useMemo(() => {
     if (method === "Efectivo") return "Pago en efectivo";
@@ -33,20 +35,25 @@ export default function PaymentModal({
     return "Pago";
   }, [method]);
 
-  // Simulación de cobro (igual que antes, pero reseteando estados)
+  // Reset al abrir/cerrar
   useEffect(() => {
     if (!open) return;
 
+    // reset UI
     setStatus("idle");
     setBackendStep("idle");
     setOrderId("");
     setPaymentRef(mkRef());
     setCardStep("detect");
 
+    // reset de “persistido una vez” cada vez que se abre el modal
+    persistedOnceRef.current = false;
+
+    // Simulaciones por método
     if (method === "Efectivo") {
       setStatus("processing");
       const t = setTimeout(() => {
-        setOrderId(genOrderId()); // placeholder mientras no persiste
+        setOrderId(genOrderId());
         setStatus("success");
       }, 800);
       return () => clearTimeout(t);
@@ -56,9 +63,9 @@ export default function PaymentModal({
       setStatus("processing");
       const t1 = setTimeout(() => setCardStep("processing"), 900);
       const t2 = setTimeout(() => {
-        setOrderId(genOrderId()); // placeholder
+        setOrderId(genOrderId());
         setStatus("success");
-      }, 900 + 1400);
+      }, 2300);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -68,7 +75,7 @@ export default function PaymentModal({
     // Mercado Pago
     setStatus("processing");
     timerRef.current = setTimeout(() => {
-      setOrderId(genOrderId()); // placeholder
+      setOrderId(genOrderId());
       setStatus("success");
     }, 3200);
     return () => {
@@ -76,23 +83,23 @@ export default function PaymentModal({
     };
   }, [open, method]);
 
-  // Cuando el pago simulado termina en success → persistimos en BD (si pasaron persistOrder)
+  // Persistir pedido (solo una vez por apertura)
   useEffect(() => {
     let cancelled = false;
     async function go() {
       if (status !== "success") return;
-      if (!persistOrder) return; // si no nos pasan función, no hacemos nada extra
+      if (!persistOrder) return;
+      if (persistedOnceRef.current) return; // 🔒 evita segunda corrida
+      persistedOnceRef.current = true;
 
       try {
         setBackendStep("saving");
         const { idPedido } = await persistOrder();
         if (cancelled) return;
-        setOrderId(String(idPedido)); // id real
+        setOrderId(String(idPedido));
         setBackendStep("done");
       } catch (e) {
-        if (cancelled) return;
-        console.error("Persistencia falló:", e);
-        setBackendStep("error");
+        if (!cancelled) setBackendStep("error");
       }
     }
     go();
@@ -111,7 +118,6 @@ export default function PaymentModal({
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6">
       <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
         <header className="px-5 py-4 border-b flex items-center justify-between">
           <h3 className="font-semibold text-lg">{title}</h3>
           <button
@@ -125,9 +131,7 @@ export default function PaymentModal({
           </button>
         </header>
 
-        {/* Body */}
         <div className="p-5 space-y-4">
-          {/* Monto */}
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
             <div className="text-xs text-amber-900/80">Monto a cobrar</div>
             <div className="text-xl font-semibold text-amber-900">
@@ -135,7 +139,6 @@ export default function PaymentModal({
             </div>
           </div>
 
-          {/* TARJETA */}
           {method === "Tarjeta" && status !== "success" && (
             <div className="space-y-4">
               <div className="grid place-items-center">
@@ -144,37 +147,20 @@ export default function PaymentModal({
                   <div className="absolute right-3 bottom-3 w-10 h-2 rounded bg-white/70" />
                 </div>
               </div>
-
-              {cardStep === "detect" ? (
-                <p className="text-sm">Acercá o insertá la tarjeta en el POS…</p>
-              ) : (
-                <p className="text-sm">Procesando pago…</p>
-              )}
-
+              <p className="text-sm">
+                {cardStep === "detect"
+                  ? "Acercá o insertá la tarjeta en el POS…"
+                  : "Procesando pago…"}
+              </p>
               <div className="flex items-center gap-2 text-sm text-zinc-600">
                 <span className="inline-block w-4 h-4 rounded-full border-2 border-zinc-300 border-t-amber-400 animate-spin" />
                 {cardStep === "detect"
                   ? "Detectando tarjeta"
                   : "Comunicando con el banco"}
               </div>
-
-              <div className="flex items-center justify-center gap-2 mt-1">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    cardStep === "detect" ? "bg-amber-400" : "bg-amber-200"
-                  }`}
-                />
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    cardStep === "processing" ? "bg-amber-400" : "bg-amber-200"
-                  }`}
-                />
-                <span className="w-2 h-2 rounded-full bg-amber-200" />
-              </div>
             </div>
           )}
 
-          {/* MERCADO PAGO */}
           {method === "Mercado Pago" && status !== "success" && (
             <div className="space-y-3">
               <p className="text-sm">
@@ -205,14 +191,12 @@ export default function PaymentModal({
             </div>
           )}
 
-          {/* EFECTIVO */}
           {method === "Efectivo" && status !== "success" && (
             <p className="text-sm">
               Acercate a la caja para realizar el pago. ¡Gracias! 🙌
             </p>
           )}
 
-          {/* SUCCESS + persistencia */}
           {status === "success" && (
             <div className="space-y-3">
               {showingSaving && (
@@ -224,7 +208,6 @@ export default function PaymentModal({
                   </div>
                 </>
               )}
-
               {showingError && (
                 <>
                   <p className="text-sm text-red-600">
@@ -236,12 +219,13 @@ export default function PaymentModal({
                   </p>
                 </>
               )}
-
               {showingDone && (
                 <>
                   <p className="text-sm">¡Pago confirmado! 🎉</p>
                   <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2">
-                    <div className="text-xs text-green-800/80">Nº de pedido</div>
+                    <div className="text-xs text-green-800/80">
+                      Nº de pedido
+                    </div>
                     <div className="text-lg font-semibold text-green-800">
                       {orderId}
                     </div>
@@ -255,7 +239,6 @@ export default function PaymentModal({
           )}
         </div>
 
-        {/* Footer */}
         <footer className="p-5 border-t flex gap-3">
           {status !== "success" ? (
             <>
@@ -274,7 +257,6 @@ export default function PaymentModal({
               </button>
             </>
           ) : !persistOrder ? (
-            // Sin persistencia: igual que antes
             <button
               onClick={() => onSuccess?.()}
               className="flex-1 h-11 rounded-xl bg-amber-400 hover:brightness-105 font-semibold"
@@ -295,7 +277,10 @@ export default function PaymentModal({
             </>
           ) : backendStep === "error" ? (
             <>
-              <button onClick={onClose} className="flex-1 h-11 rounded-xl border">
+              <button
+                onClick={onClose}
+                className="flex-1 h-11 rounded-xl border"
+              >
                 Cerrar
               </button>
               <button
@@ -305,7 +290,7 @@ export default function PaymentModal({
                     const { idPedido } = await persistOrder();
                     setOrderId(String(idPedido));
                     setBackendStep("done");
-                  } catch (e) {
+                  } catch {
                     setBackendStep("error");
                   }
                 }}
@@ -315,7 +300,6 @@ export default function PaymentModal({
               </button>
             </>
           ) : (
-            // done
             <button
               onClick={() => onSuccess?.()}
               className="flex-1 h-11 rounded-xl bg-amber-400 hover:brightness-105 font-semibold"

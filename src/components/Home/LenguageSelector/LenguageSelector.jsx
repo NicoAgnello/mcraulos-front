@@ -3,6 +3,7 @@ import { useState } from "react";
 import esFlag from "../../../assets/flags/flag-es.svg";
 import enFlag from "../../../assets/flags/flag-en.svg";
 import { useI18n } from "../../../i18n/I18nProvider";
+import { useEffect } from "react";
 
 const LANGS = [
   { code: "es", flag: esFlag, label: "Español" },
@@ -11,25 +12,27 @@ const LANGS = [
 ];
 
 export const LanguageSelector = ({ defaultValue = "es", onChange }) => {
-
-  const {lang, setLang, t} = useI18n();
-
+  const { lang, setLang, t } = useI18n();
   const [selected, setSelected] = useState(defaultValue);
+
+  // ✅ sincroniza el “selected” si el lang global cambia
+  useEffect(() => {
+    setSelected(lang);
+  }, [lang]);
 
   const handleSelect = (code) => {
     setSelected(code);
-    setLang(code);
-    onChange?.(code);
+    setLang(code);       // 👈 setea idioma global
+    onChange?.(code);    // opcional para callbacks del padre
     if (navigator.vibrate) navigator.vibrate(30);
   };
 
   return (
-     <section className="w-full mt-7">
+    <section className="w-full mt-7">
       <h2 className="text-center text-white/90 text-2xl font-semibold mb-6">
         {t("select_language")}
       </h2>
 
-      {/* contenedor centrado */}
       <ul className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6 place-items-center">
         {LANGS.map((l) => {
           const active = selected === l.code;
@@ -48,7 +51,6 @@ export const LanguageSelector = ({ defaultValue = "es", onChange }) => {
                 aria-label={l.label}
                 aria-pressed={active}
               >
-                {/* bandera como imagen para evitar issues de viewBox */}
                 <img
                   src={l.flag}
                   alt={l.label}

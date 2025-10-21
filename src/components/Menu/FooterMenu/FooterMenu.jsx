@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiShoppingCart } from "react-icons/fi";
+import { useI18n } from "../../../i18n/I18nProvider.jsx";
 
 export const FooterMenu = ({ subtotal = 0, itemCount = 0, className = "" }) =>{
   const navigate = useNavigate();
   const total = useMemo(() => Number(subtotal) || 0, [subtotal]);
-
+  const { t } = useI18n();
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 z-40
@@ -14,13 +15,13 @@ export const FooterMenu = ({ subtotal = 0, itemCount = 0, className = "" }) =>{
     >
       <div className="mx-auto max-w-[1100px] flex items-center justify-between gap-3">
         <div>
-          <div className="text-xs text-zinc-500">Subtotal</div>
+          <div className="text-xs text-zinc-500">{t("subtotal")}</div>
           <div className="text-xl font-semibold leading-none">
             ${total.toFixed(2)}
           </div>
           {itemCount > 0 && (
             <div className="text-xs text-zinc-500 mt-0.5">
-              {itemCount} {itemCount === 1 ? "ítem" : "ítems"}
+              {itemCount} {itemCount === 1 ? t("item_singular") : t("item_plural")}
             </div>
           )}
         </div>
@@ -33,7 +34,7 @@ export const FooterMenu = ({ subtotal = 0, itemCount = 0, className = "" }) =>{
                      hover:brightness-105 active:scale-[.98] transition"
         >
           <FiShoppingCart />
-          Ir al carrito
+          {t("go_to_cart")}
         </button>
       </div>
     </div>

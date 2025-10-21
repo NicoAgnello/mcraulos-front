@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { FiMinus, FiPlus, FiHeart, FiShoppingCart } from "react-icons/fi";
 import { money } from "../../../utils/money";
+import { useI18n } from "../../../i18n/I18nProvider.jsx";
 
 export const ProductCard = ({
   product,
@@ -8,9 +9,10 @@ export const ProductCard = ({
   onRemove,            // (product) => void   (opcional)
   className = "",
 }) => {
+  const { t } = useI18n();
   const {
     id,
-    nombre = "Producto",
+    nombre = t("product_generic"),
     precio = 0,
     imagen,            // URL absoluta/relativa
     descripcion = "",
@@ -69,7 +71,7 @@ export const ProductCard = ({
                 onClick={dec}
                 disabled={qty === 0}
                 className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 transition"
-                aria-label="Quitar uno"
+                aria-label={t("remove_one")}
               >
                 <FiMinus />
               </button>
@@ -80,7 +82,7 @@ export const ProductCard = ({
                 type="button"
                 onClick={inc}
                 className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 transition"
-                aria-label="Agregar uno"
+                aria-label={t("add_one")}
               >
                 <FiPlus />
               </button>
@@ -92,7 +94,7 @@ export const ProductCard = ({
               className="inline-flex items-center gap-2 rounded-full px-4 h-10 text-sm font-semibold bg-gradient-to-r from-amber-400 to-yellow-400 text-black shadow hover:brightness-105 active:scale-[.98] transition"
             >
               <FiShoppingCart />
-              Agregar
+              {t("add_to_cart")}
             </button>
           </div>
         </div>

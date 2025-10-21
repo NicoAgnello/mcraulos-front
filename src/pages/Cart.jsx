@@ -1,25 +1,27 @@
 import { useCart } from "../state/cartContext";
 import { HeaderMenu } from "../components/Menu/HeaderMenu/HeaderMenu";
 import { useNavigate } from "react-router-dom";
+import { useI18n } from "../i18n/I18nProvider.jsx";
+
 export const Cart = () => {
   const { items, totals, setQty, remove, clear } = useCart();
   const navigate = useNavigate();
-
+  const { t } = useI18n();
   return (
     <>
       <HeaderMenu />
       <main className="max-w-[900px] mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-semibold mb-4">Tu carrito</h1>
+          <h1 className="text-3xl font-semibold mb-4">{t("cart_title")}</h1>
           <button
             onClick={() => navigate("/checkout")}
             className="px-6 py-2 rounded-xl bg-amber-400 hover:brightness-105 text-black font-semibold shadow-sm active:scale-[.97] transition cursor-pointer"
           >
-            Ir a pagar
+            {t("go_to_checkout")}
           </button>
         </div>
         {items.length === 0 ? (
-          <p>Tu carrito está vacío.</p>
+          <p>{t("cart_empty")}</p>
         ) : (
           <>
             <ul className="space-y-3">
@@ -36,7 +38,7 @@ export const Cart = () => {
                   <div className="flex-1">
                     <div className="font-medium">{it.nombre}</div>
                     <div className="text-sm text-zinc-500">
-                      ${it.precio_unit.toFixed(2)} · Subtotal línea: $
+                      ${it.precio_unit.toFixed(2)} · {t("line_subtotal")}: $
                       {(it.precio_unit * it.qty).toFixed(2)}
                     </div>
                   </div>
@@ -59,7 +61,7 @@ export const Cart = () => {
                     onClick={() => remove(it.lineId)}
                     className="px-3 h-9 rounded-lg border text-red-600"
                   >
-                    Eliminar
+                    {t("remove")}
                   </button>
                 </li>
               ))}
@@ -70,10 +72,10 @@ export const Cart = () => {
                 onClick={clear}
                 className="text-xm cursor-pointer text-red-600 underline"
               >
-                Vaciar carrito
+                {t("empty_cart")}
               </button>
               <div className="text-right">
-                <div className="text-sm text-zinc-500">Total</div>
+                <div className="text-sm text-zinc-500">{t("total")}</div>
                 <div className="text-2xl font-semibold">
                   ${totals.subtotal.toFixed(2)}
                 </div>

@@ -5,8 +5,10 @@ import { ProductGrid } from "../components/Menu/ProductCard/ProductGrid";
 import { useState, useEffect } from "react";
 import {FooterMenu} from "../components/Menu/FooterMenu/FooterMenu.jsx";
 import { useCart } from "../state/cartContext";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 
 export const Menu = () => {
+  const { t } = useI18n();
   const [category, setCategory] = useState("burgers");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ useEffect(() => {
     } catch (e) {
       if (e.name !== "AbortError") {
         console.error(e);
-        setErr("No pudimos cargar el menú.");
+        setErr(t("menu_load_error"));
         setItems([]); // vaciamos para evitar mapas sobre undefined
       }
     } finally {

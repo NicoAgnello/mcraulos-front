@@ -24,6 +24,7 @@ export default function PaymentModal({
   const [paymentRef, setPaymentRef] = useState("");
   const [cardStep, setCardStep] = useState("detect"); // detect | processing
   const timerRef = useRef(null);
+  const [pointsInfo, setPointsInfo] = useState(null);
 
   // ✅ NUEVO: asegurar que persistOrder sólo corra UNA vez por apertura
   const persistedOnceRef = useRef(false);
@@ -45,6 +46,7 @@ export default function PaymentModal({
     setOrderId("");
     setPaymentRef(mkRef());
     setCardStep("detect");
+    setPointsInfo(null);
 
     // reset de “persistido una vez” cada vez que se abre el modal
     persistedOnceRef.current = false;
@@ -108,24 +110,54 @@ export default function PaymentModal({
     };
   }, [status, persistOrder]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchPoints() {
+      // Sólo buscamos cuando: ya se confirmó el pago y el pedido quedó persistido (backendStep === "done")
+      if (backendStep !== "done" || !orderId) return;
+
+      try {
+        const res = await fetch(`/api/pedidos/${orderId}/puntos`);
+        const json = await res.json();
+        if (!cancelled && res.ok && json.status === "OK") {
+          setPointsInfo(json.data); // { mostrar_coins, puntos_ganados }
+        }
+      } catch (_) {
+        // no romper la UI si falla
+      }
+    }
+
+    fetchPoints();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendStep, orderId]);
+
   if (!open) return null;
 
   const showingSaving = status === "success" && backendStep === "saving";
   const showingError = status === "success" && backendStep === "error";
   const showingDone =
     status === "success" && (!persistOrder || backendStep === "done");
-
+  const lockClose = status === "success" && backendStep !== "error";
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6">
       <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-xl overflow-hidden">
         <header className="px-5 py-4 border-b flex items-center justify-between">
           <h3 className="font-semibold text-lg">{title}</h3>
           <button
-            onClick={onClose}
-            className="text-zinc-500 hover:text-zinc-700"
-            disabled={status === "processing" || backendStep === "saving"}
+            onClick={() => {
+              if (!lockClose) onClose();
+            }}
+            className={`text-zinc-500 hover:text-zinc-700 ${
+              lockClose ? "cursor-not-allowed opacity-50" : ""
+            }`}
+            disabled={
+              lockClose || status === "processing" || backendStep === "saving"
+            }
             aria-label="Cerrar modal"
-            title="Cerrar"
+            title={lockClose ? "No se puede cerrar después del pago" : "Cerrar"}
           >
             ✕
           </button>
@@ -220,20 +252,51 @@ export default function PaymentModal({
                 </>
               )}
               {showingDone && (
-                <>
-                  <p className="text-sm">¡Pago confirmado! 🎉</p>
-                  <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2">
-                    <div className="text-xs text-green-800/80">
+                <div className="text-center space-y-4">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="text-4xl mb-1">🎉</div>
+                    <p className="text-lg font-semibold text-green-700">
+                      ¡Pago confirmado!
+                    </p>
+                    <p className="text-sm text-green-600/80">
+                      Tu pedido fue registrado correctamente
+                    </p>
+                  </div>
+
+                  {/* Número de pedido */}
+                  <div className="rounded-2xl bg-green-100 border border-green-300 px-5 py-4 shadow-inner">
+                    <div className="text-xs uppercase tracking-widest text-green-700/70">
                       Nº de pedido
                     </div>
-                    <div className="text-lg font-semibold text-green-800">
+                    <div className="text-4xl font-extrabold text-green-900 tracking-wide mt-1">
                       {orderId}
                     </div>
                   </div>
-                  <p className="text-xs text-zinc-500">
-                    Conservá tu número para retirar el pedido en el mostrador.
+
+                  <p className="text-sm text-zinc-600">
+                    Conservá este número para retirar tu pedido en el mostrador
+                    🍔
                   </p>
-                </>
+
+                  {/* Mensaje de agradecimiento */}
+                  <p className="text-base text-amber-800 mt-2 font-medium">
+                    ¡Gracias por tu compra! 🙌
+                  </p>
+
+                  {/* RauloCoins */}
+                  {pointsInfo &&
+                    Number(pointsInfo.cliente) !== 1 &&
+                    Number(pointsInfo.puntos_ganados) > 0 && (
+                      <div className="mt-3 rounded-2xl bg-amber-100 border border-amber-300 px-5 py-3 shadow-sm inline-block">
+                        <div className="flex items-center justify-center gap-2 text-amber-900 font-semibold text-lg">
+                          🪙 +{pointsInfo.puntos_ganados} RauloCoins
+                        </div>
+                        <p className="text-xs text-amber-800/70 mt-1">
+                          ¡Sumados automáticamente a tu cuenta!
+                        </p>
+                      </div>
+                    )}
+                </div>
               )}
             </div>
           )}

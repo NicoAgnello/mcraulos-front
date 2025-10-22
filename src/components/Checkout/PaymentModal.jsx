@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "react-qr-code";
+import { useI18n } from "../../i18n/I18nProvider.jsx";
 
 function mkRef() {
   const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `MP|MCraulos|${Date.now()}|${rnd}`;
 }
+
 function genOrderId() {
   const n = Math.floor(100000 + Math.random() * 900000);
   return `MR-${n}`;
@@ -12,47 +14,60 @@ function genOrderId() {
 
 export default function PaymentModal({
   open,
+  methodKey,
   method,
   total,
   onClose,
   onSuccess,
   persistOrder, // async → devuelve { idPedido }
 }) {
+  const { t } = useI18n();
+
+  // Estados
   const [status, setStatus] = useState("idle"); // idle | processing | success
   const [backendStep, setBackendStep] = useState("idle"); // idle | saving | done | error
   const [orderId, setOrderId] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
-  const [cardStep, setCardStep] = useState("detect"); // detect | processing
-  const timerRef = useRef(null);
+  const [cardStep, setCardStep] = useState("detect");
   const [pointsInfo, setPointsInfo] = useState(null);
-
-  // ✅ NUEVO: asegurar que persistOrder sólo corra UNA vez por apertura
+  const timerRef = useRef(null);
   const persistedOnceRef = useRef(false);
 
+  // ✅ método normalizado
+  const normalizedMethod =
+    methodKey ||
+    (method === "Efectivo"
+      ? "efectivo"
+      : method === "Tarjeta"
+      ? "tarjeta"
+      : method === "Mercado Pago"
+      ? "mercadopago"
+      : null);
+
   const title = useMemo(() => {
-    if (method === "Efectivo") return "Pago en efectivo";
-    if (method === "Tarjeta") return "Pago con tarjeta";
-    if (method === "Mercado Pago") return "Pago con Mercado Pago";
+    if (normalizedMethod === "efectivo") return t("cash");
+    if (normalizedMethod === "tarjeta") return t("card");
+    if (normalizedMethod === "mercadopago") return t("mercado_pago");
     return "Pago";
-  }, [method]);
+  }, [normalizedMethod, t]);
+
+  // Bloqueo de cierre tras pagar
+  const lockClose = status === "success" && backendStep !== "error";
 
   // Reset al abrir/cerrar
   useEffect(() => {
     if (!open) return;
 
-    // reset UI
     setStatus("idle");
     setBackendStep("idle");
     setOrderId("");
     setPaymentRef(mkRef());
     setCardStep("detect");
     setPointsInfo(null);
-
-    // reset de “persistido una vez” cada vez que se abre el modal
     persistedOnceRef.current = false;
 
     // Simulaciones por método
-    if (method === "Efectivo") {
+    if (normalizedMethod === "efectivo") {
       setStatus("processing");
       const t = setTimeout(() => {
         setOrderId(genOrderId());
@@ -61,7 +76,7 @@ export default function PaymentModal({
       return () => clearTimeout(t);
     }
 
-    if (method === "Tarjeta") {
+    if (normalizedMethod === "tarjeta") {
       setStatus("processing");
       const t1 = setTimeout(() => setCardStep("processing"), 900);
       const t2 = setTimeout(() => {
@@ -74,24 +89,25 @@ export default function PaymentModal({
       };
     }
 
-    // Mercado Pago
-    setStatus("processing");
-    timerRef.current = setTimeout(() => {
-      setOrderId(genOrderId());
-      setStatus("success");
-    }, 3200);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [open, method]);
+    if (normalizedMethod === "mercadopago") {
+      setStatus("processing");
+      timerRef.current = setTimeout(() => {
+        setOrderId(genOrderId());
+        setStatus("success");
+      }, 3200);
+      return () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    }
+  }, [open, normalizedMethod]);
 
-  // Persistir pedido (solo una vez por apertura)
+  // Persistir pedido
   useEffect(() => {
     let cancelled = false;
     async function go() {
       if (status !== "success") return;
       if (!persistOrder) return;
-      if (persistedOnceRef.current) return; // 🔒 evita segunda corrida
+      if (persistedOnceRef.current) return;
       persistedOnceRef.current = true;
 
       try {
@@ -110,24 +126,19 @@ export default function PaymentModal({
     };
   }, [status, persistOrder]);
 
+  // Traer puntos ganados
   useEffect(() => {
     let cancelled = false;
-
     async function fetchPoints() {
-      // Sólo buscamos cuando: ya se confirmó el pago y el pedido quedó persistido (backendStep === "done")
       if (backendStep !== "done" || !orderId) return;
-
       try {
         const res = await fetch(`/api/pedidos/${orderId}/puntos`);
         const json = await res.json();
         if (!cancelled && res.ok && json.status === "OK") {
-          setPointsInfo(json.data); // { mostrar_coins, puntos_ganados }
+          setPointsInfo(json.data);
         }
-      } catch (_) {
-        // no romper la UI si falla
-      }
+      } catch (_) {}
     }
-
     fetchPoints();
     return () => {
       cancelled = true;
@@ -140,7 +151,7 @@ export default function PaymentModal({
   const showingError = status === "success" && backendStep === "error";
   const showingDone =
     status === "success" && (!persistOrder || backendStep === "done");
-  const lockClose = status === "success" && backendStep !== "error";
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-6">
       <div className="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-xl overflow-hidden">
@@ -156,22 +167,26 @@ export default function PaymentModal({
             disabled={
               lockClose || status === "processing" || backendStep === "saving"
             }
-            aria-label="Cerrar modal"
-            title={lockClose ? "No se puede cerrar después del pago" : "Cerrar"}
+            aria-label={t("close")}
+            title={t("close")}
           >
             ✕
           </button>
         </header>
 
         <div className="p-5 space-y-4">
+          {/* MONTO */}
           <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
-            <div className="text-xs text-amber-900/80">Monto a cobrar</div>
+            <div className="text-xs text-amber-900/80">
+              {t("amount_to_charge")}
+            </div>
             <div className="text-xl font-semibold text-amber-900">
               ${Number(total).toFixed(2)}
             </div>
           </div>
 
-          {method === "Tarjeta" && status !== "success" && (
+          {/* TARJETA */}
+          {normalizedMethod === "tarjeta" && status !== "success" && (
             <div className="space-y-4">
               <div className="grid place-items-center">
                 <div className="w-28 h-20 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 relative shadow-md">
@@ -181,23 +196,22 @@ export default function PaymentModal({
               </div>
               <p className="text-sm">
                 {cardStep === "detect"
-                  ? "Acercá o insertá la tarjeta en el POS…"
-                  : "Procesando pago…"}
+                  ? t("card_insert_or_tap")
+                  : t("processing_payment")}
               </p>
               <div className="flex items-center gap-2 text-sm text-zinc-600">
                 <span className="inline-block w-4 h-4 rounded-full border-2 border-zinc-300 border-t-amber-400 animate-spin" />
                 {cardStep === "detect"
-                  ? "Detectando tarjeta"
-                  : "Comunicando con el banco"}
+                  ? t("detecting_card")
+                  : t("contacting_bank")}
               </div>
             </div>
           )}
 
-          {method === "Mercado Pago" && status !== "success" && (
+          {/* MERCADO PAGO */}
+          {normalizedMethod === "mercadopago" && status !== "success" && (
             <div className="space-y-3">
-              <p className="text-sm">
-                Escaneá el código QR desde tu app de Mercado Pago…
-              </p>
+              <p className="text-sm">{t("scan_qr")}</p>
               <div className="grid place-items-center">
                 <div className="p-3 rounded-lg bg-white shadow-sm">
                   <QRCode
@@ -214,94 +228,86 @@ export default function PaymentModal({
                 </div>
               </div>
               <div className="text-center text-xs text-zinc-500">
-                Ref: {paymentRef}
+                {t("ref")}: {paymentRef}
               </div>
               <div className="flex items-center gap-2 text-sm text-zinc-600">
                 <span className="inline-block w-4 h-4 rounded-full border-2 border-zinc-300 border-t-amber-400 animate-spin" />
-                Esperando confirmación…
+                {t("waiting_confirmation")}
               </div>
             </div>
           )}
 
-          {method === "Efectivo" && status !== "success" && (
-            <p className="text-sm">
-              Acercate a la caja para realizar el pago. ¡Gracias! 🙌
-            </p>
+          {/* EFECTIVO */}
+          {normalizedMethod === "efectivo" && status !== "success" && (
+            <p className="text-sm">{t("go_to_cash")} 🙌</p>
           )}
 
+          {/* ESTADOS */}
           {status === "success" && (
-            <div className="space-y-3">
+            <div className="space-y-3 text-center">
               {showingSaving && (
                 <>
-                  <p className="text-sm">Pago aprobado ✅</p>
-                  <div className="flex items-center gap-2 text-sm text-zinc-600">
+                  <p className="text-sm">{t("approved")} ✅</p>
+                  <div className="flex items-center gap-2 text-sm text-zinc-600 justify-center">
                     <span className="inline-block w-4 h-4 rounded-full border-2 border-zinc-300 border-t-amber-400 animate-spin" />
-                    Registrando pedido…
+                    {t("registering_order")}
                   </div>
                 </>
               )}
               {showingError && (
                 <>
                   <p className="text-sm text-red-600">
-                    No pudimos registrar el pedido.
+                    {t("could_not_register")}
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Tu pago se simuló OK, pero falló la persistencia. Podés
-                    reintentar o cerrar.
+                    {t("simulated_ok_but_failed")}
                   </p>
                 </>
               )}
               {showingDone && (
-                <div className="text-center space-y-4">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="text-4xl mb-1">🎉</div>
-                    <p className="text-lg font-semibold text-green-700">
-                      ¡Pago confirmado!
-                    </p>
-                    <p className="text-sm text-green-600/80">
-                      Tu pedido fue registrado correctamente
-                    </p>
-                  </div>
-
-                  {/* Número de pedido */}
-                  <div className="rounded-2xl bg-green-100 border border-green-300 px-5 py-4 shadow-inner">
-                    <div className="text-xs uppercase tracking-widest text-green-700/70">
-                      Nº de pedido
+                <>
+                  <p className="text-lg font-semibold text-green-700">
+                    {t("payment_confirmed")} 🎉
+                  </p>
+                  <p className="text-sm text-green-600/80">
+                    {t("order_registered_ok")}
+                  </p>
+                  <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2">
+                    <div className="text-xs text-green-800/80">
+                      {t("order_number")}
                     </div>
-                    <div className="text-4xl font-extrabold text-green-900 tracking-wide mt-1">
+                    <div className="text-2xl font-extrabold text-green-900 tracking-wide mt-1">
                       {orderId}
                     </div>
                   </div>
-
-                  <p className="text-sm text-zinc-600">
-                    Conservá este número para retirar tu pedido en el mostrador
-                    🍔
+                  <p className="text-xs text-zinc-500">
+                    {t("keep_for_pickup")} 🍔
                   </p>
+                  <p className="text-sm mt-2">{t("thanks_purchase")} 🙌</p>
 
-                  {/* Mensaje de agradecimiento */}
-                  <p className="text-base text-amber-800 mt-2 font-medium">
-                    ¡Gracias por tu compra! 🙌
-                  </p>
-
-                  {/* RauloCoins */}
                   {pointsInfo &&
                     Number(pointsInfo.cliente) !== 1 &&
                     Number(pointsInfo.puntos_ganados) > 0 && (
-                      <div className="mt-3 rounded-2xl bg-amber-100 border border-amber-300 px-5 py-3 shadow-sm inline-block">
-                        <div className="flex items-center justify-center gap-2 text-amber-900 font-semibold text-lg">
-                          🪙 +{pointsInfo.puntos_ganados} RauloCoins
+                      <div className="mt-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-amber-900 inline-block">
+                        <div className="font-semibold text-lg">
+                        🏆{" "}
+                          {t("earned_coins").replace(
+                            "{{n}}",
+                            pointsInfo.puntos_ganados
+                          )}
                         </div>
                         <p className="text-xs text-amber-800/70 mt-1">
-                          ¡Sumados automáticamente a tu cuenta!
+                          {t("added_to_account")}
                         </p>
                       </div>
                     )}
-                </div>
+                </>
               )}
             </div>
           )}
         </div>
 
+        {/* FOOTER */}
         <footer className="p-5 border-t flex gap-3">
           {status !== "success" ? (
             <>
@@ -310,13 +316,13 @@ export default function PaymentModal({
                 disabled={status === "processing"}
                 className="flex-1 h-11 rounded-xl border"
               >
-                Cancelar
+                {t("cancel")}
               </button>
               <button
                 disabled
                 className="flex-1 h-11 rounded-xl bg-zinc-200 text-zinc-500"
               >
-                Procesando…
+                {t("processing")}
               </button>
             </>
           ) : !persistOrder ? (
@@ -324,18 +330,18 @@ export default function PaymentModal({
               onClick={() => onSuccess?.()}
               className="flex-1 h-11 rounded-xl bg-amber-400 hover:brightness-105 font-semibold"
             >
-              Finalizar
+              {t("finalize")}
             </button>
           ) : backendStep === "saving" ? (
             <>
               <button disabled className="flex-1 h-11 rounded-xl border">
-                Cancelar
+                {t("cancel")}
               </button>
               <button
                 disabled
                 className="flex-1 h-11 rounded-xl bg-zinc-200 text-zinc-500"
               >
-                Registrando pedido…
+                {t("registering_order")}
               </button>
             </>
           ) : backendStep === "error" ? (
@@ -344,7 +350,7 @@ export default function PaymentModal({
                 onClick={onClose}
                 className="flex-1 h-11 rounded-xl border"
               >
-                Cerrar
+                {t("close")}
               </button>
               <button
                 onClick={async () => {
@@ -359,7 +365,7 @@ export default function PaymentModal({
                 }}
                 className="flex-1 h-11 rounded-xl bg-amber-400 hover:brightness-105 font-semibold"
               >
-                Reintentar
+                {t("retry")}
               </button>
             </>
           ) : (
@@ -367,7 +373,7 @@ export default function PaymentModal({
               onClick={() => onSuccess?.()}
               className="flex-1 h-11 rounded-xl bg-amber-400 hover:brightness-105 font-semibold"
             >
-              Finalizar
+              {t("finalize")}
             </button>
           )}
         </footer>

@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
-import { FiMinus, FiPlus, FiHeart, FiShoppingCart } from "react-icons/fi";
+import { FiMinus, FiPlus, FiShoppingCart } from "react-icons/fi";
 import { money } from "../../../utils/money";
 import { useI18n } from "../../../i18n/I18nProvider.jsx";
 
 export const ProductCard = ({
   product,
-  onAdd,               // (product, qty) => void
-  onRemove,            // (product) => void   (opcional)
+  onAdd, // (product, qty) => void
+  onRemove, // (product) => void   (opcional)
   className = "",
 }) => {
   const { t } = useI18n();
@@ -14,24 +14,21 @@ export const ProductCard = ({
     id,
     nombre = t("product_generic"),
     precio = 0,
-    imagen,            // URL absoluta/relativa
+    imagen, // URL absoluta/relativa
     descripcion = "",
   } = product || {};
 
   const [qty, setQty] = useState(0);
-  const imgSrc = useMemo(
-    () => imagen || "/placeholder-burger.png",
-    [imagen]
-  );
+  const imgSrc = useMemo(() => imagen || "/placeholder-burger.png", [imagen]);
 
-  const dec = () => setQty(q => Math.max(0, q - 1));
-  const inc = () => setQty(q => Math.min(99, q + 1));
- const handleAdd = () => {
-  if (qty <= 0) return;
-  onAdd?.(product, qty);   // el padre pasa cart.add
-  if (navigator.vibrate) navigator.vibrate(20);
-  setQty(0);
-};
+  const dec = () => setQty((q) => Math.max(0, q - 1));
+  const inc = () => setQty((q) => Math.min(99, q + 1));
+  const handleAdd = () => {
+    if (qty <= 0) return;
+    onAdd?.(product, qty); // el padre pasa cart.add
+    if (navigator.vibrate) navigator.vibrate(20);
+    setQty(0);
+  };
 
   return (
     <article
@@ -60,7 +57,9 @@ export const ProductCard = ({
           </div>
 
           {descripcion ? (
-            <p className="mt-1 text-l text-zinc-800 line-clamp-2">{descripcion}</p>
+            <p className="mt-1 text-l text-zinc-800 line-clamp-2">
+              {descripcion}
+            </p>
           ) : null}
 
           {/* controls */}

@@ -21,7 +21,7 @@ function CouponSelect({ subtotal, idCliente, onApplied, onCleared }) {
   const [sel, setSel] = useState("");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState(null); // {type:'ok'|'error', text}
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   // Cargar cupones disponibles (cliente => personales+genéricos; invitado => genéricos)
   useEffect(() => {
     let abort = false;
@@ -240,8 +240,7 @@ export const Checkout = () => {
   // Esta función la ejecuta el modal cuando el pago simulado queda "success"
   // Dentro de Checkout.jsx
   async function persistOrder() {
-    const metodoPagoApi = methodToApiName(payment); // "efectivo" | "tarjeta" | "mercadopago"
-
+    const metodoPagoApi = payment; // ya es "efectivo" | "tarjeta" | "mercadopago"
     // 🧠 Clonamos el carrito actual para no perderlo si cambia el estado
     const productosParaPedido = [...items];
 
@@ -266,7 +265,7 @@ export const Checkout = () => {
     const idPedido = await postPedido(payload);
 
     // 2️⃣ Confirmar pago si aplica
-    if (metodoPagoApi === "tarjeta" || metodoPagoApi === "mercadopago") {
+    if (payment === "tarjeta" || payment === "mercadopago") {
       await confirmarPagoPedido(idPedido, metodoPagoApi);
     }
 
@@ -302,26 +301,31 @@ export const Checkout = () => {
         ) : (
           <>
             <div className="grid gap-4 mb-4">
+              {" "}
               {[
-                { name: t("cash"), color: "bg-green-500/90" },
-                { name: t("card"), color: "bg-blue-500/90" },
-                { name: t("mercado_pago"), color: "bg-sky-500/90" },
+                { key: "efectivo", label: t("cash"), color: "bg-green-500/90" },
+                { key: "tarjeta", label: t("card"), color: "bg-blue-500/90" },
+                {
+                  key: "mercadopago",
+                  label: t("mercado_pago"),
+                  color: "bg-sky-500/90",
+                },
               ].map((m) => (
                 <label
-                  key={m.name}
+                  key={m.key}
                   className="flex items-center gap-3 cursor-pointer"
                 >
                   <input
                     type="radio"
                     name="payment"
-                    value={m.name}
-                    checked={payment === m.name}
-                    onChange={() => setPayment(m.name)}
+                    value={m.key}
+                    checked={payment === m.key}
+                    onChange={() => setPayment(m.key)}
                   />
                   <div
                     className={`flex-1 h-12 rounded-xl ${m.color} text-white font-semibold grid place-items-center hover:brightness-110 transition`}
                   >
-                    {m.name}
+                    {m.label}
                   </div>
                 </label>
               ))}
@@ -338,7 +342,7 @@ export const Checkout = () => {
                     <span className="font-semibold text-amber-700">
                       {t("guest")}
                     </span>
-                    . 
+                    .
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2">
                     <input
@@ -395,14 +399,21 @@ export const Checkout = () => {
 
             {/* RESUMEN */}
             <section className="rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-100 border border-amber-200 p-4 shadow-sm mb-5">
-               <h2 className="font-semibold mb-3 text-amber-900">{t("summary")}</h2>
+              <h2 className="font-semibold mb-3 text-amber-900">
+                {t("summary")}
+              </h2>
               <div className="flex justify-between text-sm mb-1">
                 <span>{t("subtotal")}</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-sm text-green-700 mb-1">
-                   <span>{t("discount_with_code").replace("{{code}}", appliedCoupon.code)}</span>
+                  <span>
+                    {t("discount_with_code").replace(
+                      "{{code}}",
+                      appliedCoupon.code
+                    )}
+                  </span>
                   <span>- ${appliedCoupon.discount.toFixed(2)}</span>
                 </div>
               )}
@@ -427,7 +438,7 @@ export const Checkout = () => {
 
       <PaymentModal
         open={modalOpen}
-        method={payment}
+        methodKey={payment}
         total={totalToPay} // 👈 total ya con descuento
         onClose={handleModalClose}
         onSuccess={handleSuccess}

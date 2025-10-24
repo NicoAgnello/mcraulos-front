@@ -70,6 +70,16 @@ const DICTS = {
     server_connect_error: "Error al conectar con el servidor.",
     choose_payment_before_continue:
       "Elegí un método de pago antes de continuar.",
+    coupon_title: "Cupón",
+    loading_short: "Cargando...",
+    no_coupon: "Sin cupón",
+    remove_coupon: "Quitar",
+    remove_coupon_title: "Quitar cupón",
+    no_coupons_available: "No hay cupones disponibles.",
+    coupons_load_error: "No se pudieron cargar los cupones",
+    coupon_invalid: "Cupón inválido",
+    coupon_applied_percent: "Aplicado {{p}}% (-${{disc}})",
+    coupon_applied_amount: "Descuento -${{disc}}",
 
     // Menu
     subtotal: "Subtotal",
@@ -174,6 +184,16 @@ const DICTS = {
     choose_payment_before_continue:
       "Choose a payment method before continuing.",
 
+    coupon_title: "Coupon",
+    loading_short: "Loading...",
+    no_coupon: "No coupon",
+    remove_coupon: "Remove",
+    remove_coupon_title: "Remove coupon",
+    no_coupons_available: "No coupons available.",
+    coupons_load_error: "We couldn’t load coupons",
+    coupon_invalid: "Invalid coupon",
+    coupon_applied_percent: "Applied {{p}}% (-${{disc}})",
+    coupon_applied_amount: "Discount -${{disc}}",
     // Menu
     subtotal: "Subtotal",
     item_singular: "item",

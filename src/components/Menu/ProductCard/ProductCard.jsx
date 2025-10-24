@@ -18,16 +18,16 @@ export const ProductCard = ({
     descripcion = "",
   } = product || {};
 
-  const [qty, setQty] = useState(0);
+  const [qty, setQty] = useState(1);
   const imgSrc = useMemo(() => imagen || "/placeholder-burger.png", [imagen]);
 
-  const dec = () => setQty((q) => Math.max(0, q - 1));
+  const dec = () => setQty((q) => Math.max(1, q - 1));
   const inc = () => setQty((q) => Math.min(99, q + 1));
   const handleAdd = () => {
     if (qty <= 0) return;
     onAdd?.(product, qty); // el padre pasa cart.add
     if (navigator.vibrate) navigator.vibrate(20);
-    setQty(0);
+    setQty(1);
   };
 
   return (
@@ -68,7 +68,7 @@ export const ProductCard = ({
               <button
                 type="button"
                 onClick={dec}
-                disabled={qty === 0}
+                disabled={qty === 1}
                 className="grid h-9 w-9 place-items-center rounded-full border border-zinc-200 dark:border-zinc-700 disabled:opacity-40 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-95 transition"
                 aria-label={t("remove_one")}
               >

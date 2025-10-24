@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "../../i18n/I18nProvider.jsx";
 
 export default function CouponSelect({
   subtotal,
@@ -6,10 +7,12 @@ export default function CouponSelect({
   onApplied,
   onCleared,
 }) {
+  const { t } = useI18n();
+
   const [options, setOptions] = useState([]); // cupones disponibles
-  const [sel, setSel] = useState(""); // código seleccionado
+  const [sel, setSel] = useState("");         // código seleccionado
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState(null); // {type:'ok'|'error', text}
+  const [msg, setMsg] = useState(null);       // {type:'ok'|'error', text}
 
   // endpoint según esté logueado o no
   const query = useMemo(() => {
@@ -27,8 +30,7 @@ export default function CouponSelect({
         setMsg(null);
         const res = await fetch(query);
         const json = await res.json();
-        if (!res.ok)
-          throw new Error(json.message || "No se pudieron cargar los cupones");
+        if (!res.ok) throw new Error(json.message || t("coupons_load_error"));
         if (!abort) setOptions(json.data ?? []);
       } catch (e) {
         if (!abort) setMsg({ type: "error", text: e.message });
@@ -39,7 +41,7 @@ export default function CouponSelect({
     return () => {
       abort = true;
     };
-  }, [query]);
+  }, [query, t]);
 
   // aplicar / quitar cupón
   const applySelected = async (code) => {
@@ -64,17 +66,19 @@ export default function CouponSelect({
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Cupón inválido");
+      if (!res.ok) throw new Error(json.message || t("coupon_invalid"));
 
       const d = json.data; // {tipo, value, discount, total_with_discount, code...}
 
-      setMsg({
-        type: "ok",
-        text:
-          d.tipo === "porcentaje"
-            ? `Aplicado ${d.value}% (-$${Number(d.discount).toFixed(2)})`
-            : `Descuento -$${Number(d.discount).toFixed(2)}`,
-      });
+      const successText =
+        (d?.tipo || "").toLowerCase() === "porcentaje"
+          ? t("coupon_applied_percent")
+              .replace("{{p}}", String(d.value))
+              .replace("{{disc}}", Number(d.discount).toFixed(2))
+          : t("coupon_applied_amount")
+              .replace("{{disc}}", Number(d.discount).toFixed(2));
+
+      setMsg({ type: "ok", text: successText });
 
       onApplied?.({
         code: d.code,
@@ -98,23 +102,24 @@ export default function CouponSelect({
   }, [idCliente]);
 
   return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-      <label className="block text-sm mb-2">Cupón disponible</label>
+    <div className="mt-3 pt-3 border-t border-zinc-200">
+      <label className="block text-sm mb-2 font-medium text-zinc-700">
+        {t("coupon_title")}
+      </label>
       <div className="flex gap-2">
         <select
-          className="flex-1 rounded-lg bg-black/30 border border-white/10 px-3 py-2 outline-none focus:border-white/30"
+          className="flex-1 rounded-lg bg-white border border-zinc-300 px-3 py-2 outline-none focus:ring-2 focus:ring-amber-300"
           value={sel}
           onChange={(e) => applySelected(e.target.value)}
           disabled={loading || options.length === 0}
         >
-          <option value="">{loading ? "Cargando..." : "Sin cupón"}</option>
+          <option value="">{loading ? t("loading_short") : t("no_coupon")}</option>
           {options.map((c) => {
             const tipo = (c.tipo_descuento || "").toLowerCase();
             const label =
               tipo === "porcentaje"
                 ? `${c.codigo} — ${Number(c.descuento)}%`
                 : `${c.codigo} — $${Number(c.descuento).toFixed(2)}`;
-
             return (
               <option key={c.id_cupon} value={c.codigo}>
                 {label}
@@ -127,10 +132,10 @@ export default function CouponSelect({
           <button
             type="button"
             onClick={() => applySelected("")}
-            className="rounded-lg px-3 py-2 bg-white/10 hover:bg-white/20"
-            title="Quitar cupón"
+            className="rounded-lg px-3 py-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 text-sm"
+            title={t("remove_coupon_title")}
           >
-            Quitar
+            {t("remove_coupon")}
           </button>
         )}
       </div>
@@ -138,10 +143,16 @@ export default function CouponSelect({
       {msg && (
         <p
           className={`mt-2 text-sm ${
-            msg.type === "ok" ? "text-emerald-300" : "text-red-300"
+            msg.type === "ok" ? "text-green-600" : "text-red-500"
           }`}
         >
           {msg.text}
+        </p>
+      )}
+
+      {!loading && options.length === 0 && (
+        <p className="mt-2 text-xs text-zinc-500">
+          {t("no_coupons_available")}
         </p>
       )}
     </div>

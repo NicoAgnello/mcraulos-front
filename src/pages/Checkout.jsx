@@ -5,179 +5,43 @@ import { HeaderMenu } from "../components/Menu/HeaderMenu/HeaderMenu";
 import PaymentModal from "../components/Checkout/PaymentModal";
 import { useEffect, useMemo, useState } from "react";
 import { useI18n } from "../i18n/I18nProvider.jsx";
+import CouponSelect from "../components/Checkout/CuponSelect.jsx"; // ✅ externo, limpio
 import {
-  methodToApiName,
   buildPedidoPayload,
   postPedido,
   confirmarPagoPedido,
   getPedidoById,
 } from "../utils/orders.js";
-
-/* ──────────────────────────────────────────────────────────────
-   Select de cupones inline (simple: solo "código — valor")
-   ────────────────────────────────────────────────────────────── */
-function CouponSelect({ subtotal, idCliente, onApplied, onCleared }) {
-  const [options, setOptions] = useState([]);
-  const [sel, setSel] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState(null); // {type:'ok'|'error', text}
-  const { t, lang } = useI18n();
-  // Cargar cupones disponibles (cliente => personales+genéricos; invitado => genéricos)
-  useEffect(() => {
-    let abort = false;
-    (async () => {
-      try {
-        setLoading(true);
-        setMsg(null);
-        const qs = idCliente ? `?cliente=${idCliente}` : "";
-        const res = await fetch(`/api/cupon/disponibles${qs}`);
-        const json = await res.json();
-        if (!res.ok)
-          throw new Error(json.message || "No se pudieron cargar los cupones");
-        if (!abort) setOptions(json.data ?? []);
-      } catch (e) {
-        if (!abort) setMsg({ type: "error", text: e.message });
-      } finally {
-        if (!abort) setLoading(false);
-      }
-    })();
-    return () => {
-      abort = true;
-    };
-  }, [idCliente]);
-
-  // Aplicar/Quitar cupón
-  const applySelected = async (code) => {
-    if (!code) {
-      setSel("");
-      setMsg(null);
-      onCleared?.();
-      return;
-    }
-    try {
-      setLoading(true);
-      setMsg(null);
-      setSel(code);
-      const res = await fetch("/api/cupon/validar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code,
-          total: subtotal,
-          id_cliente: idCliente ?? null,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Cupón inválido");
-
-      const d = json.data; // { code, tipo, value, discount, total_with_discount }
-      setMsg({
-        type: "ok",
-        text:
-          d.tipo === "porcentaje"
-            ? lang === "en"
-              ? `Applied ${d.value}% (-$${Number(d.discount).toFixed(2)})`
-              : `Aplicado ${d.value}% (-$${Number(d.discount).toFixed(2)})`
-            : lang === "en"
-            ? `Discount -$${Number(d.discount).toFixed(2)}`
-            : `Descuento -$${Number(d.discount).toFixed(2)}`,
-      });
-      onApplied?.({
-        code: d.code,
-        discount: Number(d.discount),
-        totalWithDiscount: Number(d.total_with_discount),
-      });
-    } catch (e) {
-      setMsg({ type: "error", text: e.message });
-      onApplied?.(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Si cambia el cliente, reseteo
-  useEffect(() => {
-    setSel("");
-    setMsg(null);
-    onCleared?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idCliente]);
-
-  return (
-    <div className="mb-6 rounded-2xl border border-zinc-200 p-4 bg-white shadow-sm">
-      <h2 className="font-semibold mb-2">{t("coupon_title")}</h2>
-      <div className="flex gap-2">
-        <select
-          className="flex-1 border rounded-lg p-2 bg-white focus:ring-2 focus:ring-amber-300 outline-none"
-          value={sel}
-          onChange={(e) => applySelected(e.target.value)}
-          disabled={loading || options.length === 0}
-        >
-          <option value="">
-            {loading ? t("loading_short") : t("no_coupon")}
-          </option>
-          {options.map((c) => {
-            const tipo = (c.tipo_descuento || "").toLowerCase();
-            const valor =
-              tipo === "porcentaje"
-                ? `${Number(c.descuento)}%`
-                : `$${Number(c.descuento).toFixed(2)}`;
-            // 👇 SOLO "código — valor" como pediste
-            return (
-              <option key={c.id_cupon} value={c.codigo}>
-                {c.codigo} — {valor}
-              </option>
-            );
-          })}
-        </select>
-        {sel && (
-          <button
-            type="button"
-            onClick={() => applySelected("")}
-            className="rounded-lg px-3 py-2 bg-zinc-100 hover:bg-zinc-200"
-            title={t("remove_coupon_title")}
-          >
-            {t("remove_coupon")}
-          </button>
-        )}
-      </div>
-      {msg && (
-        <p
-          className={`mt-2 text-sm ${
-            msg.type === "ok" ? "text-green-600" : "text-red-500"
-          }`}
-        >
-          {msg.text}
-        </p>
-      )}
-      {!loading && options.length === 0 && (
-        <p className="mt-2 text-xs text-zinc-500">
-          {t("no_coupons_available")}
-        </p>
-      )}
-    </div>
-  );
-}
-
+import { FaMoneyBillWave, FaCreditCard } from "react-icons/fa";
+import { SiMercadopago } from "react-icons/si";
 export const Checkout = () => {
   const navigate = useNavigate();
   const { totals, items, clear } = useCart();
   const { t } = useI18n();
-  const [payment, setPayment] = useState("");
+
+  const [payment, setPayment] = useState("");          // "efectivo" | "tarjeta" | "mercadopago"
   const [modalOpen, setModalOpen] = useState(false);
   const [dni, setDni] = useState("");
   const [cliente, setCliente] = useState(
     JSON.parse(localStorage.getItem("cliente")) || null
   );
-  const [loginMsg, setLoginMsg] = useState(null); // mensaje visual
+  const [loginMsg, setLoginMsg] = useState(null);      // mensaje visual
   const [loginStatus, setLoginStatus] = useState(null); // "ok" | "error" | null
 
-  // Cupón aplicado (del select)
+  // Cupón aplicado
   const [appliedCoupon, setAppliedCoupon] = useState(null); // {code, discount, totalWithDiscount} | null
 
   const subtotal = useMemo(() => totals?.subtotal ?? 0, [totals]);
   const totalToPay = appliedCoupon?.totalWithDiscount ?? subtotal;
   const idCliente = cliente ? cliente.id_cliente : null; // null => invitado
+
+  // ✅ si el cliente deja de estar logueado, limpiamos cupón
+  useEffect(() => {
+    if (!idCliente && appliedCoupon) {
+      setAppliedCoupon(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idCliente]);
 
   const handleLogin = async () => {
     const limpio = dni.replace(/\D/g, "");
@@ -197,14 +61,12 @@ export const Checkout = () => {
       const data = await res.json();
 
       if (res.ok && data.status === "OK") {
-        // ✅ Login correcto
         setCliente(data.data);
         localStorage.setItem("cliente", JSON.stringify(data.data));
         setLoginMsg(t("session_ok"));
         setLoginStatus("ok");
         setDni("");
       } else {
-        // ❌ DNI no existe
         setCliente(null);
         localStorage.removeItem("cliente");
         setLoginMsg(data.message || t("dni_not_exists"));
@@ -216,7 +78,6 @@ export const Checkout = () => {
       setLoginStatus("error");
     }
 
-    // Ocultar el mensaje automáticamente después de unos segundos
     setTimeout(() => {
       setLoginMsg(null);
       setLoginStatus(null);
@@ -237,22 +98,18 @@ export const Checkout = () => {
 
   const handleModalClose = () => setModalOpen(false);
 
-  // Esta función la ejecuta el modal cuando el pago simulado queda "success"
-  // Dentro de Checkout.jsx
+  // La ejecuta el modal cuando el pago simulado queda "success"
   async function persistOrder() {
     const metodoPagoApi = payment; // ya es "efectivo" | "tarjeta" | "mercadopago"
-    // 🧠 Clonamos el carrito actual para no perderlo si cambia el estado
-    const productosParaPedido = [...items];
 
+    const productosParaPedido = [...items];
     if (!productosParaPedido || productosParaPedido.length === 0) {
       console.error("Carrito vacío al persistir el pedido");
-      throw new Error(
-        "Tu carrito está vacío. Volvé al menú y agregá productos."
-      );
+      throw new Error(t("cart_empty"));
     }
 
     const payload = buildPedidoPayload({
-      items: productosParaPedido, // 👈 se envía el snapshot del carrito
+      items: productosParaPedido,
       metodoPagoApi,
       idCliente: cliente ? cliente.id_cliente : 1,
       cupon_code: appliedCoupon?.code ?? null,
@@ -261,24 +118,25 @@ export const Checkout = () => {
 
     console.log("Enviando pedido:", payload);
 
-    // 1️⃣ Crear pedido
+    // 1) Crear pedido
     const idPedido = await postPedido(payload);
 
-    // 2️⃣ Confirmar pago si aplica
+    // 2) Confirmar pago si aplica
     if (payment === "tarjeta" || payment === "mercadopago") {
       await confirmarPagoPedido(idPedido, metodoPagoApi);
     }
 
-    // 3️⃣ Verificación final
+    // 3) Verificación final
     await getPedidoById(idPedido);
 
     return { idPedido };
   }
+
   const handleSuccess = () => {
     try {
       clear(); // limpia carrito
-      localStorage.removeItem("cliente"); // limpia cliente persistido
-      setCliente(null); // limpia estado en memoria
+      localStorage.removeItem("cliente");
+      setCliente(null);
     } finally {
       setModalOpen(false);
       navigate("/"); // volver al home
@@ -300,38 +158,58 @@ export const Checkout = () => {
           <p className="text-center text-zinc-500">{t("cart_empty_brief")}</p>
         ) : (
           <>
-            <div className="grid gap-4 mb-4">
-              {" "}
-              {[
-                { key: "efectivo", label: t("cash"), color: "bg-green-500/90" },
-                { key: "tarjeta", label: t("card"), color: "bg-blue-500/90" },
-                {
-                  key: "mercadopago",
-                  label: t("mercado_pago"),
-                  color: "bg-sky-500/90",
-                },
-              ].map((m) => (
-                <label
-                  key={m.key}
-                  className="flex items-center gap-3 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={m.key}
-                    checked={payment === m.key}
-                    onChange={() => setPayment(m.key)}
-                  />
-                  <div
-                    className={`flex-1 h-12 rounded-xl ${m.color} text-white font-semibold grid place-items-center hover:brightness-110 transition`}
-                  >
-                    {m.label}
-                  </div>
-                </label>
-              ))}
-            </div>
+  {/* Métodos de pago */}
+<section className="mb-6">
+  <h2 className="font-semibold mb-3 text-zinc-800 text-center">{t("payment_method")}</h2>
 
-            {/* LOGIN CLIENTE */}
+  <div className="grid sm:grid-cols-3 gap-4">
+    {/* Efectivo */}
+    <label
+      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+        ${
+          payment === "efectivo"
+            ? "border-yellow-400 bg-green-50 scale-[1.03]"
+            : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
+        }`}
+      onClick={() => setPayment("efectivo")}
+    >
+      <FaMoneyBillWave className="text-3xl text-green-600" />
+      <span className="font-semibold text-zinc-800">{t("cash")}</span>
+    </label>
+
+    {/* Tarjeta */}
+    <label
+      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+        ${
+          payment === "tarjeta"
+            ? "border-yellow-400 bg-blue-50 scale-[1.03]"
+            : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
+        }`}
+      onClick={() => setPayment("tarjeta")}
+    >
+      <FaCreditCard className="text-3xl text-blue-600" />
+      <span className="font-semibold text-zinc-800">{t("card")}</span>
+    </label>
+
+    {/* Mercado Pago */}
+    <label
+      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+        ${
+          payment === "mercadopago"
+            ? "border-yellow-400 bg-sky-50 scale-[1.03]"
+            : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
+        }`}
+      onClick={() => setPayment("mercadopago")}
+    >
+      <SiMercadopago className="text-3xl text-sky-600" />
+      <span className="font-semibold text-zinc-800">{t("mercado_pago")}</span>
+    </label>
+  </div>
+</section>
+
+
+
+            {/* LOGIN CLIENTE + (si hay cliente) CUPONES dentro del mismo panel */}
             <section className="mb-6 rounded-2xl border border-zinc-200 p-4 bg-white shadow-sm">
               <h2 className="font-semibold mb-2">{t("identify_title")}</h2>
 
@@ -360,7 +238,6 @@ export const Checkout = () => {
                     </button>
                   </div>
 
-                  {/* Mensaje dinámico */}
                   {loginMsg && (
                     <p
                       className={`mt-3 text-sm transition-all ${
@@ -372,30 +249,32 @@ export const Checkout = () => {
                   )}
                 </>
               ) : (
-                <div className="flex justify-between items-center">
-                  <span className="text-zinc-700">
-                    {t("welcome_name").replace("{{name}}", cliente.nombre)}
-                  </span>
-                  <button
-                    onClick={() => {
-                      setCliente(null);
-                      localStorage.removeItem("cliente");
-                    }}
-                    className="text-sm text-red-500 hover:underline"
-                  >
-                    {t("logout")}
-                  </button>
-                </div>
+                <>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-700">
+                      {t("welcome_name").replace("{{name}}", cliente.nombre)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setCliente(null);
+                        localStorage.removeItem("cliente");
+                      }}
+                      className="text-sm text-red-500 hover:underline"
+                    >
+                      {t("logout")}
+                    </button>
+                  </div>
+
+                  {/* Cupón integrado en el mismo bloque */}
+                  <CouponSelect
+                    subtotal={subtotal}
+                    idCliente={idCliente}
+                    onApplied={(info) => setAppliedCoupon(info)}
+                    onCleared={() => setAppliedCoupon(null)}
+                  />
+                </>
               )}
             </section>
-
-            {/* SELECT DE CUPONES (solo código — valor) */}
-            <CouponSelect
-              subtotal={subtotal}
-              idCliente={idCliente}
-              onApplied={(info) => setAppliedCoupon(info)}
-              onCleared={() => setAppliedCoupon(null)}
-            />
 
             {/* RESUMEN */}
             <section className="rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-100 border border-amber-200 p-4 shadow-sm mb-5">
@@ -438,11 +317,11 @@ export const Checkout = () => {
 
       <PaymentModal
         open={modalOpen}
-        methodKey={payment}
-        total={totalToPay} // 👈 total ya con descuento
+        methodKey={payment}          // ✅ pasamos la key estable
+        total={totalToPay}           // total ya con descuento si aplica
         onClose={handleModalClose}
         onSuccess={handleSuccess}
-        persistOrder={persistOrder} // persiste y muestra el id real
+        persistOrder={persistOrder}  // persiste y muestra el id real
       />
     </>
   );

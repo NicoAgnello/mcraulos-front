@@ -19,13 +19,13 @@ export const Checkout = () => {
   const { totals, items, clear } = useCart();
   const { t } = useI18n();
 
-  const [payment, setPayment] = useState("");          // "efectivo" | "tarjeta" | "mercadopago"
+  const [payment, setPayment] = useState(""); // "efectivo" | "tarjeta" | "mercadopago"
   const [modalOpen, setModalOpen] = useState(false);
   const [dni, setDni] = useState("");
   const [cliente, setCliente] = useState(
     JSON.parse(localStorage.getItem("cliente")) || null
   );
-  const [loginMsg, setLoginMsg] = useState(null);      // mensaje visual
+  const [loginMsg, setLoginMsg] = useState(null); // mensaje visual
   const [loginStatus, setLoginStatus] = useState(null); // "ok" | "error" | null
 
   // Cupón aplicado
@@ -158,56 +158,58 @@ export const Checkout = () => {
           <p className="text-center text-zinc-500">{t("cart_empty_brief")}</p>
         ) : (
           <>
-  {/* Métodos de pago */}
-<section className="mb-6">
-  <h2 className="font-semibold mb-3 text-zinc-800 text-center">{t("payment_method")}</h2>
-
-  <div className="grid sm:grid-cols-3 gap-4">
-    {/* Efectivo */}
-    <label
-      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+            {/* Métodos de pago */}
+            <section className="mb-6">
+              <div className="grid sm:grid-cols-3 gap-4">
+                {/* Efectivo */}
+                <label
+                  className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
         ${
           payment === "efectivo"
             ? "border-yellow-400 bg-green-50 scale-[1.03]"
             : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
         }`}
-      onClick={() => setPayment("efectivo")}
-    >
-      <FaMoneyBillWave className="text-3xl text-green-600" />
-      <span className="font-semibold text-zinc-800">{t("cash")}</span>
-    </label>
+                  onClick={() => setPayment("efectivo")}
+                >
+                  <FaMoneyBillWave className="text-3xl text-green-600" />
+                  <span className="font-semibold text-zinc-800">
+                    {t("cash")}
+                  </span>
+                </label>
 
-    {/* Tarjeta */}
-    <label
-      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+                {/* Tarjeta */}
+                <label
+                  className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
         ${
           payment === "tarjeta"
             ? "border-yellow-400 bg-blue-50 scale-[1.03]"
             : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
         }`}
-      onClick={() => setPayment("tarjeta")}
-    >
-      <FaCreditCard className="text-3xl text-blue-600" />
-      <span className="font-semibold text-zinc-800">{t("card")}</span>
-    </label>
+                  onClick={() => setPayment("tarjeta")}
+                >
+                  <FaCreditCard className="text-3xl text-blue-600" />
+                  <span className="font-semibold text-zinc-800">
+                    {t("card")}
+                  </span>
+                </label>
 
-    {/* Mercado Pago */}
-    <label
-      className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
+                {/* Mercado Pago */}
+                <label
+                  className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 
         ${
           payment === "mercadopago"
             ? "border-yellow-400 bg-sky-50 scale-[1.03]"
             : "border-zinc-300 hover:border-yellow-400 hover:scale-[1.02] bg-white"
         }`}
-      onClick={() => setPayment("mercadopago")}
-    >
-      <SiMercadopago className="text-3xl text-sky-600" />
-      <span className="font-semibold text-zinc-800">{t("mercado_pago")}</span>
-    </label>
-  </div>
-</section>
-
-
+                  onClick={() => setPayment("mercadopago")}
+                >
+                  <SiMercadopago className="text-3xl text-sky-600" />
+                  <span className="font-semibold text-zinc-800">
+                    {t("mercado_pago")}
+                  </span>
+                </label>
+              </div>
+            </section>
 
             {/* LOGIN CLIENTE + (si hay cliente) CUPONES dentro del mismo panel */}
             <section className="mb-6 rounded-2xl border border-zinc-200 p-4 bg-white shadow-sm">
@@ -317,11 +319,11 @@ export const Checkout = () => {
 
       <PaymentModal
         open={modalOpen}
-        methodKey={payment}          // ✅ pasamos la key estable
-        total={totalToPay}           // total ya con descuento si aplica
+        methodKey={payment} // ✅ pasamos la key estable
+        total={totalToPay} // total ya con descuento si aplica
         onClose={handleModalClose}
         onSuccess={handleSuccess}
-        persistOrder={persistOrder}  // persiste y muestra el id real
+        persistOrder={persistOrder} // persiste y muestra el id real
       />
     </>
   );
